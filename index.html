@@ -3269,7 +3269,7 @@ async function enviarFormulario() {
   } else if (tipo.startsWith('CONTRATO')) {
     ['contrato_juridico','inv_mes','inv_avance_fisico','inv_avance_financiero',
      'inv_estado_contrato','inv_descripcion','id_proyecto','proyecto',
-     'inv_poblacion_cantidad',
+     'inv_poblacion_cantidad','inv_lugar_ejecucion',
      'inv_magnitud_programada','inv_magnitud_ejecutada'].forEach(id => {
       const el = document.getElementById(id); if (el) datos[id] = el.value.trim();
     });
@@ -3296,13 +3296,19 @@ async function enviarFormulario() {
     if (tpG) datos['gest_tipo_poblacion'] = Array.from(tpG.selectedOptions).map(o=>o.value).join(', ');
   } else if (tipo === 'CONSTRUYENDO TERRITORIO') {
     ['ct_tipo_item','ct_fecha','ct_area_responsable','ct_descripcion',
-     'ct_problema_referencia','ct_pct_respuesta','ct_otras_entidades',
-     'ct_cuales_entidades','ct_correo_notificacion',
+     'ct_problema_referencia','ct_pct_respuesta',
+     'ct_cuales_entidades',
      'zona','lugar','lugar_custom','coordenadas','enlace_maps'].forEach(id => {
       const el = document.getElementById(id); if (el) datos[id] = el.value.trim();
     });
     const tpCT = document.getElementById('ct_tipo_poblacion');
     if (tpCT) datos['ct_tipo_poblacion'] = Array.from(tpCT.selectedOptions).map(o=>o.value).join(', ');
+    // poblacion_mujeres
+    const muj = document.getElementById('poblacion_mujeres');
+    if (muj) datos['poblacion_mujeres'] = muj.value.trim();
+    // numero_orfeo
+    const orf = document.getElementById('numero_orfeo');
+    if (orf) datos['numero_orfeo'] = orf.value.trim();
     // Generar código
     const cod = 'CT-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
     datos['ct_codigo'] = cod;
@@ -3329,7 +3335,7 @@ async function enviarFormulario() {
     if (tpPP) datos['pp_tipo_poblacion'] = Array.from(tpPP.selectedOptions).map(o=>o.value).join(', ');
     datos['pp_estado'] = datos['pp_estado_visible'];
   } else {
-    ['entidades_externas','numero_orfeo','zona','lugar','lugar_custom','coordenadas','enlace_maps'].forEach(id => {
+    ['zona','lugar','lugar_custom','coordenadas','enlace_maps'].forEach(id => {
       const el = document.getElementById(id); if (el) datos[id] = el.value.trim();
     });
   }
