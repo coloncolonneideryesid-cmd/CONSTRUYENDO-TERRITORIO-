@@ -273,7 +273,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
 
       <div class="field">
         <label for="gerencia">Gerencia <span class="req">*</span></label>
-        <select id="gerencia" name="gerencia" required onchange="actualizarAreas()">
+        <select id="gerencia" name="gerencia" required onchange="actualizarAreas(); filtrarOKRPorAreaGerencia(); filtrarProyectosPorAreaGerencia();">
           <option value="">Seleccionar gerencia...</option>
           <option value="CAMINA SEGURA">CAMINA SEGURA</option>
           <option value="MAS OPORTUNIDADES">MAS OPORTUNIDADES</option>
@@ -286,7 +286,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
 
       <div class="field">
         <label for="area">Área <span class="req">*</span></label>
-        <select id="area" name="area" required onchange="actualizarCorreos()">
+        <select id="area" name="area" required onchange="actualizarCorreos(); filtrarOKRPorAreaGerencia(); filtrarProyectosPorAreaGerencia();">
           <option value="">— Seleccione gerencia primero —</option>
         </select>
       </div>
@@ -317,7 +317,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
             <option value="MISIONAL - OTRAS">Otras</option>
           </optgroup>
           <optgroup label="── Gestión Territorial ──">
-            <option value="GESTIÓN TERRITORIAL">Gestión Territorial (Ejecución contractual)</option>
+            <option value="GESTIÓN TERRITORIAL">Cumplimiento PDL (Gestión Territorial)</option>
           </optgroup>
           <optgroup label="── Territorio ──">
             <option value="CONSTRUYENDO TERRITORIO">CONSTRUYENDO TERRITORIO</option>
@@ -675,18 +675,32 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
         </select>
       </div>
 
-      <!-- Avance físico % -->
+      <!-- Valor total del contrato -->
+      <div class="field">
+        <label for="inv_valor_total">Valor Total del Contrato ($) <span class="req">*</span></label>
+        <input type="number" id="inv_valor_total" name="inv_valor_total" required min="0" step="1" placeholder="Ej: 150000000" oninput="calcularPctFinanciero()">
+        <div class="hint">Valor total del contrato en pesos colombianos</div>
+      </div>
+
+      <!-- Valor ejecutado -->
+      <div class="field">
+        <label for="inv_valor_ejecutado">Valor Ejecutado / Girado ($) <span class="req">*</span></label>
+        <input type="number" id="inv_valor_ejecutado" name="inv_valor_ejecutado" required min="0" step="1" placeholder="Ej: 75000000" oninput="calcularPctFinanciero()">
+        <div class="hint">Valor ejecutado o girado a la fecha de reporte</div>
+      </div>
+
+      <!-- % Avance físico -->
       <div class="field">
         <label for="inv_avance_fisico">Avance Físico (%) <span class="req">*</span></label>
         <input type="number" id="inv_avance_fisico" name="inv_avance_fisico" required min="0" max="100" step="0.01" placeholder="0.00">
         <div class="hint">Porcentaje de avance físico del contrato</div>
       </div>
 
-      <!-- Avance financiero % -->
+      <!-- % Avance financiero (calculado automáticamente) -->
       <div class="field">
-        <label for="inv_avance_financiero">Avance Financiero / Giros (%) <span class="req">*</span></label>
-        <input type="number" id="inv_avance_financiero" name="inv_avance_financiero" required min="0" max="100" step="0.01" placeholder="0.00">
-        <div class="hint">Porcentaje de ejecución financiera (giros realizados)</div>
+        <label for="inv_avance_financiero">Avance Financiero (%) <span style="background:#e8f5e9;color:#1B7E45;font-size:.68rem;padding:.1rem .5rem;border-radius:10px;font-weight:700;">⚡ AUTO</span></label>
+        <input type="number" id="inv_avance_financiero" name="inv_avance_financiero" readonly min="0" max="100" step="0.01" placeholder="Se calcula automáticamente" style="background:var(--gris-1);color:#1B7E45;font-weight:700;">
+        <div class="hint">Calculado: Valor Ejecutado ÷ Valor Total × 100</div>
       </div>
 
       <!-- Magnitud programada y ejecutada -->
@@ -930,7 +944,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
   <div class="card" id="seccion-gestion" style="display:none; border-left:4px solid #1565C0;">
     <div class="card-header" style="background:linear-gradient(90deg,#e8f0fe 0%,#fff 100%);">
       <div class="card-icon" style="background:#1565C0;">🗺️</div>
-      <div><div class="card-title" style="color:#1565C0;">Gestión Territorial — Ejecución Contractual</div></div>
+      <div><div class="card-title" style="color:#1565C0;">Cumplimiento PDL — Gestión Territorial</div></div>
       <div class="card-num">2 / 5</div>
     </div>
     <div class="card-body">
@@ -2270,6 +2284,153 @@ function actualizarCorreos() {
   }
 }
 
+// ── Mapeo OKR por gerencia ────────────────────────────────────────────────
+const OKR_POR_GERENCIA = {
+  "INFRAESTRUCTURA":       ["OKR-INF-1","OKR-INF-2"],
+  "MAS TERRITORIO":        ["OKR-AMB-1","OKR-AMB-2","OKR-SEP-1","OKR-CYPA-1","OKR-CYPA-2","OKR-PYAR-1","OKR-PYAR-2"],
+  "IVC":                   ["OKR-EP-1"],
+  "TERRITORIO SOCIAL":     ["OKR-PART-1","OKR-DD-2","OKR-MP-1","OKR-MP-2","OKR-MP-3","OKR-BE-1"],
+  "CAMINA SEGURA":         ["OKR-SEG-1","OKR-JS-1","OKR-JS-2","OKR-TC-1","OKR-TS-1"],
+  "MAS OPORTUNIDADES":     ["OKR-DEP-1","OKR-PROD-1","OKR-PROD-2","OKR-CUL-1","OKR-CUL-2","OKR-EDU-1","OKR-EDU-2","OKR-EDU-3"],
+};
+const OKR_POR_AREA = {
+  "INFRAESTRUCTURA":       ["OKR-INF-1","OKR-INF-2"],
+  "AMBIENTE CONFIABLE":    ["OKR-AMB-1","OKR-AMB-2","OKR-SEP-1"],
+  "CYPA":                  ["OKR-CYPA-1","OKR-CYPA-2"],
+  "RIESGOS (PyAR)":        ["OKR-PYAR-1","OKR-PYAR-2"],
+  "IVC":                   ["OKR-EP-1"],
+  "PARTICIPACION INCIDENTE":["OKR-PART-1"],
+  "DERECHOS DIFERENCIALES":["OKR-DD-2"],
+  "MENOS POBREZA":         ["OKR-MP-1","OKR-MP-2","OKR-MP-3"],
+  "BIEN-ESTAR":            ["OKR-BE-1"],
+  "SEGURIDAD":             ["OKR-SEG-1"],
+  "JUSTICIA SOCIAL":       ["OKR-JS-1","OKR-JS-2"],
+  "TERRITORIO CONFIABLE":  ["OKR-TC-1"],
+  "TEJIDO SOCIAL":         ["OKR-TS-1"],
+  "DEPORTES":              ["OKR-DEP-1"],
+  "PRODUCTIVIDAD":         ["OKR-PROD-1","OKR-PROD-2"],
+  "CULTURA":               ["OKR-CUL-1","OKR-CUL-2"],
+  "EDUCACION":             ["OKR-EDU-1","OKR-EDU-2","OKR-EDU-3"],
+};
+
+// ── Mapeo Proyectos POAI por gerencia ─────────────────────────────────────
+const PROYECTOS_POR_GERENCIA = {
+  "INFRAESTRUCTURA":   ["2252","2254","2257"],
+  "MAS TERRITORIO":    ["2273","2481","2502","2601","2805"],
+  "IVC":               ["2349","2601","2667"],
+  "TERRITORIO SOCIAL": ["2316","2385","2409","2506","2606","2608","2648","2708","2791","2802"],
+  "CAMINA SEGURA":     ["2285","2349","2620","2633"],
+  "MAS OPORTUNIDADES": ["2251","2405","2495","2608","2615","2627","2638","2694"],
+};
+const PROYECTOS_POR_AREA = {
+  "INFRAESTRUCTURA":       ["2252","2254","2257"],
+  "AMBIENTE CONFIABLE":    ["2502","2601","2805"],
+  "CYPA":                  ["2481"],
+  "RIESGOS (PyAR)":        ["2273"],
+  "IVC":                   ["2349","2601","2667"],
+  "PARTICIPACION INCIDENTE":["2409"],
+  "MENOS POBREZA":         ["2506","2648"],
+  "BIEN-ESTAR":            ["2316","2791"],
+  "DERECHOS DIFERENCIALES":["2385","2802"],
+  "SEGURIDAD":             ["2285","2349"],
+  "JUSTICIA SOCIAL":       ["2633"],
+  "TERRITORIO CONFIABLE":  ["2620"],
+  "TEJIDO SOCIAL":         ["2606","2708"],
+  "DEPORTES":              ["2495"],
+  "PRODUCTIVIDAD":         ["2608","2627"],
+  "CULTURA":               ["2251","2405","2638"],
+  "EDUCACION":             ["2615","2694"],
+};
+
+function filtrarOKRPorAreaGerencia() {
+  const gerencia = (document.getElementById('gerencia')?.value || '').toUpperCase();
+  const area     = (document.getElementById('area')?.value || '').toUpperCase();
+  const sel      = document.getElementById('okr_resultado');
+  if (!sel) return;
+
+  // Determinar qué OKRs mostrar
+  let okrsPermitidos = null;
+  if (area && OKR_POR_AREA[area]) {
+    okrsPermitidos = new Set(OKR_POR_AREA[area]);
+  } else if (gerencia) {
+    // buscar match de gerencia
+    for (const g of Object.keys(OKR_POR_GERENCIA)) {
+      if (gerencia.includes(g) || g.includes(gerencia.split(' ')[0])) {
+        okrsPermitidos = new Set(OKR_POR_GERENCIA[g]);
+        break;
+      }
+    }
+  }
+
+  const prevVal = sel.value;
+  sel.querySelectorAll('option, optgroup').forEach(el => {
+    if (el.tagName === 'OPTION') {
+      if (!el.value) { el.style.display = ''; return; } // placeholder
+      el.style.display = (!okrsPermitidos || okrsPermitidos.has(el.value)) ? '' : 'none';
+    } else if (el.tagName === 'OPTGROUP') {
+      // Ocultar optgroup si todos sus hijos están ocultos
+      const hijos = el.querySelectorAll('option');
+      const algVisible = Array.from(hijos).some(o => o.style.display !== 'none');
+      el.style.display = algVisible ? '' : 'none';
+    }
+  });
+
+  // Si el valor actual ya no es visible, limpiar
+  if (prevVal && okrsPermitidos && !okrsPermitidos.has(prevVal)) {
+    sel.value = '';
+    ['okr_objetivo_tactico','okr_area_auto','okr_lider','okr_carpeta'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+  }
+}
+
+function filtrarProyectosPorAreaGerencia() {
+  const gerencia = (document.getElementById('gerencia')?.value || '').toUpperCase();
+  const area     = (document.getElementById('area')?.value || '').toUpperCase();
+  const sel      = document.getElementById('id_proyecto');
+  if (!sel) return;
+
+  let idsPermitidos = null;
+  if (area && PROYECTOS_POR_AREA[area]) {
+    idsPermitidos = new Set(PROYECTOS_POR_AREA[area]);
+  } else if (gerencia) {
+    for (const g of Object.keys(PROYECTOS_POR_GERENCIA)) {
+      if (gerencia.includes(g) || g.includes(gerencia.split(' ')[0])) {
+        idsPermitidos = new Set(PROYECTOS_POR_GERENCIA[g]);
+        break;
+      }
+    }
+  }
+
+  const prevVal = sel.value;
+  sel.querySelectorAll('option').forEach(opt => {
+    if (!opt.value) { opt.style.display = ''; return; }
+    opt.style.display = (!idsPermitidos || idsPermitidos.has(opt.value)) ? '' : 'none';
+  });
+
+  if (prevVal && idsPermitidos && !idsPermitidos.has(prevVal)) {
+    sel.value = '';
+    document.getElementById('proyecto').value = '';
+    const selMeta = document.getElementById('meta_proyecto');
+    if (selMeta) selMeta.innerHTML = '<option value="">— Seleccione el proyecto primero —</option>';
+    const wrap = document.getElementById('campo-meta-wrap');
+    if (wrap) wrap.style.display = 'none';
+  }
+}
+
+// ── Cálculo automático % financiero ──────────────────────────────────────
+function calcularPctFinanciero() {
+  const total    = parseFloat(document.getElementById('inv_valor_total')?.value) || 0;
+  const ejecutado= parseFloat(document.getElementById('inv_valor_ejecutado')?.value) || 0;
+  const pctEl    = document.getElementById('inv_avance_financiero');
+  if (!pctEl) return;
+  if (total > 0) {
+    pctEl.value = Math.min((ejecutado / total * 100).toFixed(2), 100);
+  } else {
+    pctEl.value = '';
+  }
+}
+
 function autocompleteOKR() {
   const key = document.getElementById('okr_resultado').value;
   const okr = OKR_DATA[key];
@@ -2278,16 +2439,6 @@ function autocompleteOKR() {
   document.getElementById('okr_area_auto').value = okr.area;
   document.getElementById('okr_lider').value = okr.lider;
   document.getElementById('okr_carpeta').value = okr.carpeta;
-  // Sincronizar área/gerencia con el selector principal si el usuario no lo había marcado
-  const areaSelect = document.getElementById('area');
-  if (areaSelect && (!areaSelect.value || areaSelect.value === '')) {
-    // Intentar match
-    for (let i = 0; i < areaSelect.options.length; i++) {
-      if (areaSelect.options[i].value.toUpperCase().includes(okr.area.toUpperCase().split(' ')[0])) {
-        break;
-      }
-    }
-  }
   actualizarProgreso();
 }
 
@@ -3268,6 +3419,7 @@ async function enviarFormulario() {
     });
   } else if (tipo.startsWith('CONTRATO')) {
     ['contrato_juridico','inv_mes','inv_avance_fisico','inv_avance_financiero',
+     'inv_valor_total','inv_valor_ejecutado',
      'inv_estado_contrato','inv_descripcion','id_proyecto','proyecto',
      'inv_poblacion_cantidad','inv_lugar_ejecucion',
      'inv_magnitud_programada','inv_magnitud_ejecutada'].forEach(id => {
